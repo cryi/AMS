@@ -1,0 +1,5 @@
+{
+    "ETHO_SN" : "https://github.com/cryi/docker-etho-sn.git",
+    "ETHO_MN" : "https://github.com/cryi/docker-etho-mn.git",
+    "GINCOIN_MN" : "https://github.com/cryi/docker-gincoin-mn.git"
+}

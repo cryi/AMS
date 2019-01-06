@@ -1,0 +1,643 @@
+#!/bin/sh
+
+#  AUTOMATED MASTERNODE SETUP
+#  Copyright © 2019 cryon.io
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+#  Contact: cryi@tutanota.com
+
+PATH_TO_AMS=$(readlink -f "$0")
+BASEDIR=$(dirname "$PATH_TO_AMS")
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+SUPPORTED_NODES_URL="https://raw.githubusercontent.com/cryi/AMS/master/supported_nodes.json"
+AMS_VERSION_URL="https://raw.githubusercontent.com/cryi/AMS/master/version.json"
+
+. "$BASEDIR/_ams_methods/conf.sh"
+. "$BASEDIR/_ams_methods/docker.sh"
+. "$BASEDIR/_ams_methods/help.sh"
+. "$BASEDIR/_ams_methods/prints.sh"
+. "$BASEDIR/_ams_methods/user.sh"
+. "$BASEDIR/_ams_methods/util.sh"
+. "$BASEDIR/_ams_methods/dist_info.sh"
+
+require_root_priv() {
+    if [ ! `id -u` = 0 ] ; then
+        error "This option requires root (or sudo) privilages"
+        exit 1
+    fi
+}
+
+require_docker_priv() {
+    if [ "$(groups | grep "docker" || echo "true")" = "true" ] && [ "$(groups | grep "root" || echo "true")" = "true" ]; then
+        error "This option requires docker privilages. Either run ams as root or grant user docker privilages."
+        info "HINT: sudo ./ams --grant-docker"
+        exit 2
+    fi
+}
+
+require_ams_version() {
+    NEEDED_VER=$1
+    get_json_file_value "$BASEDIR/version.json" "ams"
+    AMS_VERSION=$JSON_VALUE
+    if [ "$(echo $NEEDED_VER' > '$AMS_VERSION | bc -l)" = "1" ]; then 
+        error "Node $NODE requires version $NEEDED_VER of ams. Please update your ams."
+        info "HINT: ./ams --update-ams"
+        exit 3
+    fi
+}
+
+parse_params() {
+    for arg in "$@"; do 
+        case $arg in
+            -h|--help)
+                script_usage
+                exit 0
+                ;;
+            -f|--full)
+                full=true
+                REAPLY_STATE=true
+                noCache="--no-cache"
+                forceRecreate="--force-recreate"
+                ;;
+            -sd|--setup-dependencies)
+                dependencies=true
+                ;;
+            -n=*|--node=*)
+                NODE=$(echo $arg | sed 's/-n=//g')
+                NODE=$(echo $NODE | sed 's/--node=//g')
+                ;; 
+            -r|--restart)
+                start=true
+                REAPLY_STATE=true
+                forceRecreate="--force-recreate"
+                ;;    
+            -b|--build)
+                build=true
+                REAPLY_STATE=true
+                ;;
+            -s|--start)
+                start=true
+                REAPLY_STATE=true
+                ;;   
+            --stop)
+                stop=true
+                ;;  
+            -un|--update-node)
+                UPDATE_NODE=true
+                ;;
+            -us|--update-service)
+                UPDATE_SERVICE=true
+                REAPLY_STATE=true
+                ;;
+            -uc|--update-ams)
+                UPDATE_AMS=true
+                REAPLY_STATE=true
+                ;;
+            -au|--auto-update)
+                grantDocker=true
+                autoUpdate=true
+                ;;
+            -au=*|--auto-update=*)
+                grantDocker=true
+                autoUpdate=true
+                SPECIFIC_USER=$(echo $arg | sed 's/-au=//g')
+                SPECIFIC_USER=$(echo $SPECIFIC_USER | sed 's/--auto-update=//g')
+                ;;   
+            -aul=*|--auto-update-level=*)
+                grantDocker=true
+                autoUpdate=true
+                autoUpdateLevel=$(echo $arg | sed 's/-aul=//g')
+                autoUpdateLevel=$(echo $autoUpdateLevel | sed 's/--auto-update-level=//g')    
+                ;;                    
+            -dau|--disable-auto-update)
+                disableAutoUpdate=true
+                ;;
+            -rfp|--restore-file-permissions)
+                restoreFilePermisions=true
+                ;;
+            --init)
+                init=true
+                ;;
+            -gd|--grant-docker)
+                grantDocker=true
+                ;;
+            -gd=*|--grant-docker=*)
+                grantDocker=true
+                SPECIFIC_USER=$(echo $arg | sed 's/-gd=//g')
+                SPECIFIC_USER=$(echo $SPECIFIC_USER | sed 's/--grant-docker=//g')
+                ;;
+            -nc|--no-cache)
+                noCache="--no-cache"
+                ;;
+            -i|--node-info)
+                info=true
+                ;;
+            --user=*)
+                user=true
+                grantDocker=true
+                SPECIFIC_USER=$(echo $arg | sed 's/--user=//g')
+                ;;
+            --passed)
+                passed=true
+                ;;
+            -se=*|--set-env=*)
+                setEnv=true
+                ;;
+            -sp=*|--set-parameter=*)
+                setParams=true
+                ;;
+            --bind=*)
+                bind=true
+                ;;
+            --ams-branch=*)
+                AMS_BRANCH=$(echo $arg | sed 's/--ams-branch=//g')
+                ;;
+            -?*)
+                echo "Invalid parameter was provided: $arg"
+                exit 2
+                ;;
+            *)
+                break;
+        esac
+    done
+}
+parse_params "$@"
+
+update_current_user
+if [ -n "$SPECIFIC_USER" ]; then 
+    USER=$SPECIFIC_USER 
+    
+    case "$BASEDIR" in 
+        /home/*)
+            case "$BASEDIR" in
+                /home/$USER/*) ;;
+                /home/$USER) ;;
+                *) wrongHomeDir=true ;; 
+            esac 
+            ;;
+        /root/*) wrongHomeDir=true ;;
+    esac
+
+    if [ "$wrongHomeDir" = "true" ]; then
+        error "AMS cannot be installed in home directory of other user than it is installed for."
+        info "HINT: Move AMS folder to non home directory. E.g. /mns/ams"
+        exit 4
+    fi
+fi
+
+if [ "$user" = "true" ]; then
+    require_root_priv 
+    create_user $USER
+    
+    if [ "$?" = "0" ]; then 
+        success "$USER successfuly created.";
+    else 
+        error "Failed to create $USER"
+        exit 4
+    fi
+fi
+
+if [ "$full" = "true" ] || [ "$dependencies" = "true" ]; then
+    require_root_priv
+
+    dist=$(get_dist_version)
+
+    case "$dist" in 
+        ubuntu)
+            apt update && apt upgrade -q -y && \
+            apt install -y apt-transport-https ca-certificates curl software-properties-common git unzip jq bc || \
+            { error "Failed to install dependencies. Please retry..." && exit 10; }
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+            apt-key fingerprint 0EBFCD88
+            add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+            apt update && apt install -y docker-ce
+        ;;
+        fedora)
+            dnf -y upgrade
+            dnf -y install dnf-plugins-core
+            dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+            dnf -y install curl git unzip jq bc && dnf -y install docker-ce || \
+            { error "Failed to install dependencies. Please retry..." && exit 10; }
+            systemctl enable docker
+            systemctl start docker
+            sleep 15
+        ;;
+        debian)
+            apt-get update && apt upgrade -q -y
+            dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
+            if [ "$dist_version" -ge 8 ]; then
+                apt-get install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common git unzip jq bc || \
+                { error "Failed to install dependencies. Please retry..." && exit 10; }
+
+                curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+                apt-key fingerprint 0EBFCD88
+                add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+            else 
+                apt-get install apt-transport-https ca-certificates curl python-software-properties git unzip jq bc || \
+                { error "Failed to install dependencies. Please retry..." && exit 10; }
+
+                curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+                apt-key fingerprint 0EBFCD88
+                add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+                cp /etc/apt/sources.list /etc/apt/sources.list.backup
+                fixed_list=$(grep -v "deb-src [arch=amd64] https://download.docker.com/linux/debian wheezy stable" /etc/apt/sources.list)
+                echo "$fixed_list" > /etc/apt/sources.list
+            fi
+            apt-get update && apt-get install docker-ce -y
+        ;;
+        centos)
+            yum upgrade -y
+            yum install -y yum-utils device-mapper-persistent-data epel-release
+            yum install -y lvm2 git unzip jq bc
+            yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            yum install -y docker-ce
+            systemctl enable docker
+            systemctl start docker
+            sleep 15
+        ;;
+        *)
+            error "Unsupported operating system '$dist'"
+            exit 10
+        ;;
+    esac
+
+    docker run hello-world || \
+    { error "Failed to install or run docker. Please retry..." && exit 10; }
+
+    get_latest_github_release "docker/compose"
+    curl -L https://github.com/docker/compose/releases/download/$RESULT/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+    docker-compose --version || \
+    { error "Failed to install or run docker-compose. Please retry..." && exit 10; }
+fi
+
+# update node type
+get_node_type
+RESULT=$?
+if [ "$RESULT" = "2" ]; then 
+    error "NODE type not defined."
+    info "HINT: ./ams --node=[node]"
+    info "HINT2: Check supported_nodes.json for list of supported nodes."
+    exit 6
+elif [ "$RESULT" = "1" ]; then
+    info "Stopping old node: $OLD_NODE"
+    require_docker_priv
+    stop_service "$BASEDIR/containers/$OLD_NODE/docker-compose.yml"
+    NEW_NODE=true
+fi
+
+if [ -n "$NODE" ] && [ "$stop" = "true" ]; then
+    require_docker_priv
+    stop_service "$BASEDIR/containers/$NODE/docker-compose.yml"
+fi
+
+# check, if node type supported
+if [ "$NEW_NODE" = "true" ]; then 
+    get_json_file_value "$BASEDIR/supported_nodes.json" "$NODE"
+    if [ -z "$JSON_VALUE" ] || [ "$JSON_VALUE" = "null" ]; then
+        NO_LOCAL_SUPPORT=true
+    fi
+
+    # check for remote support
+    get_json_value "$(curl -fsL \"$SUPPORTED_NODES_URL\")" "$NODE"
+    if [ -z "$JSON_VALUE" ] || [ "$JSON_VALUE" = "null" ]; then
+        NO_REMOTE_SUPPORT=true
+    fi
+ 
+    if  [ "$NO_LOCAL_SUPPORT" = "true" ] && [ "$NO_REMOTE_SUPPORT" = "true" ]; then 
+        error "Not supported node type: $NODE"
+        exit 7
+    elif [ "$NO_LOCAL_SUPPORT" = "true" ]; then
+        curl -fL "$SUPPORTED_NODES_URL" -o "$BASEDIR/supported_nodes.json"
+    fi
+fi
+
+# load ams branch
+if [ -z "$AMS_BRANCH" ]; then 
+    if [ -f "$BASEDIR/state/conf.json" ]; then
+        get_json_file_value "$BASEDIR/state/conf.json" "branch"
+        AMS_BRANCH=$JSON_VALUE
+    fi 
+    if [ -z "$AMS_BRANCH" ]; then 
+        AMS_BRANCH=master
+    else 
+        set_json_file_value "$BASEDIR/state/conf.json" "branch" "$AMS_BRANCH"
+    fi
+fi
+
+# update ams
+if [ "$full" = "true" ] || [ "$UPDATE_AMS" = "true" ]; then
+    LATEST_VER=$(curl -sL "$AMS_VERSION_URL" | jq '.ams' -r 2>/dev/null)
+    get_json_file_value "$BASEDIR/version.json" "ams"
+    AMS_VERSION=$JSON_VALUE
+    if [ $(echo $LATEST_VER' > '$AMS_VERSION | bc -l) = 1 ]; then 
+        info "Updating ams"
+        update_repository "$BASEDIR" "$AMS_BRANCH"
+        chmod +x "$PATH_TO_AMS"
+        restoreFilePermisions=true
+    fi
+fi
+
+# Clone service repository if not yet cloned
+if [ ! -d "$BASEDIR/containers/$NODE" ]; then
+    
+    REPOSITORY_URL=$(jq ".$NODE" "$BASEDIR/supported_nodes.json" -r 2>/dev/null)
+    info "Cloning repository: $REPOSITORY_URL"
+    clone_repository "$REPOSITORY_URL" "$BASEDIR/containers/$NODE"
+fi
+
+# update service
+if [ "$full" = "true" ] || [ "$UPDATE_SERVICE" = "true" ]; then
+    REPOSITORY_URL=$(jq ".$NODE" "$BASEDIR/supported_nodes.json" -r 2>/dev/null)
+    repo_link_to_raw_link "$REPOSITORY_URL" "def.json"
+    NODE_DEF=$(curl -fsL "$RESULT")
+    if [ -z "NODE_DEF" ]; then
+        error "Failed to obtain node service definition. Please retry..."
+        exit 11
+    fi
+    get_json_value "$NODE_DEF" "required-ams-version"
+
+    info "Checking updates for service definition for node $NODE"
+    require_ams_version $JSON_VALUE
+
+    get_json_value "$NODE_DEF" "version"
+    LATEST_VER=$JSON_VALUE
+    
+    get_json_file_value "$BASEDIR/containers/$NODE/def.json" "version"
+    SERVICE_VER=$JSON_VALUE
+    if [ "$(echo $LATEST_VER' > '$SERVICE_VER | bc -l)" = "1" ]; then 
+        info "Updating service definition"
+        update_repository "$BASEDIR/containers/$NODE"
+        restoreFilePermisions=true
+        build=true
+        start=true
+        noCache="--no-cache"
+    fi
+fi
+
+# ensure that we use proper version of ams for node management
+get_json_file_value "$BASEDIR/containers/$NODE/def.json" "required-ams-version"
+NEEDED_VER=$JSON_VALUE
+require_ams_version $NEEDED_VER
+
+if [ ! "$passed" = "true" ]; then
+    save_node_type
+fi
+
+# set fs permissions
+if [ "$full" = "true" ] || [ "$restoreFilePermisions" = "true" ]; then
+    require_root_priv
+    create_group "ams"
+    REAL_USER=$(who am i | awk '{print $1}')
+    add_user_to_group $USER "ams"
+    add_user_to_group $REAL_USER "ams"
+    chgrp -R "ams" "$BASEDIR"
+    chmod -R g+rw "$BASEDIR"
+    chmod g+x "$PATH_TO_AMS"
+
+    DEF_FILE="$BASEDIR/containers/$NODE/def.json"
+
+    get_json_file_value "$DEF_FILE" "fs-permissions"
+    sh "$BASEDIR/containers/$NODE/$JSON_VALUE"  
+fi
+
+# set env variables
+DEF_FILE="$BASEDIR/containers/$NODE/def.json"
+
+get_json_file_value "$DEF_FILE" "set-env"
+ENV_SETTER="$BASEDIR/containers/$NODE/$JSON_VALUE"
+if [ "$setEnv" = "true" ]; then  
+    rm -f "$BASEDIR/state/environment"
+    for arg in "$@"; do 
+        case $arg in
+            -se=*|--set-env=*)
+                ENV=$(echo $arg | sed 's/-se=//')
+                ENV=$(echo $ENV | sed 's/--set-env=//')
+                info "Configuring env variable '$ENV'"
+                if [ -f "$ENV_SETTER" ]; then
+                    sh "$ENV_SETTER" "$ENV" 
+                fi
+                echo "$ENV" >> "$BASEDIR/state/environment"
+                ;;
+        esac
+    done
+elif [ -f "$BASEDIR/state/environment" ] && [ "$REAPLY_STATE" = "true" ] && [ ! "$passed" = "true" ]; then
+    while IFS= read -r line; do
+        if [ -n "$line" ]; then
+            info "Reaplying env variable '$line'"
+            if [ -f "$ENV_SETTER" ]; then
+                sh "$ENV_SETTER" "$line" 
+            fi
+        fi
+    done < "$BASEDIR/state/environment"
+fi
+# set params
+get_json_file_value "$DEF_FILE" "set-param"
+PARAM_SETTER="$BASEDIR/containers/$NODE/$JSON_VALUE"
+if [ "$setParams" = "true" ]; then  
+    rm -f "$BASEDIR/state/parameters"
+    for arg in "$@"; do 
+        case $arg in
+            -sp=*|--set-parameter=*)
+                PARAM==$(echo $arg | sed 's/-sp=//')
+                PARAM==$(echo $PARAM | sed 's/--set-parameter=//')
+                info "Setting parameter '$PARAM'"
+                if [ -f "$PARAM_SETTER" ]; then
+                    sh "$PARAM_SETTER" "$PARAM" 
+                fi
+                echo "$PARAM" >> "$BASEDIR/state/parameters"
+                ;;
+        esac
+    done
+elif [ -f "$BASEDIR/state/parameters" ] && [ "$REAPLY_STATE" = "true" ] && [ ! "$passed" = "true" ]; then
+    while IFS= read -r line; do
+        if [ -n "$line" ]; then
+            info "Reaplying parameter '$line'"
+            if [ -f "$PARAM_SETTER" ]; then
+                sh "$PARAM_SETTER" "$line" 
+            fi
+        fi
+    done < "$BASEDIR/state/parameters"
+fi
+
+# set binds
+if [ "$bind" = "true" ]; then
+    rm -f "$BASEDIR/state/binds"
+    for arg in "$@"; do
+        case $arg in
+            --bind=*)
+                BIND=$(echo $arg | sed 's/--bind=//g')
+                info "Setting binding '$BIND'"
+                BIND_PORT=$(echo "$BIND" | sed 's/.*://g')
+                NEW_COMPOSE=$(sed "s/- \".*:$BIND_PORT\"/- \"$BIND\"/g" "$BASEDIR/containers/$NODE/docker-compose.yml")
+                echo "$NEW_COMPOSE" > "$BASEDIR/containers/$NODE/docker-compose.yml"
+                echo "$BIND" >> "$BASEDIR/state/binds"
+                ;;
+        esac
+    done
+elif [ -f "$BASEDIR/state/binds" ] && [ "$REAPLY_STATE" = "true" ] && [ ! "$passed" = "true" ]; then
+    while IFS= read -r line; do
+        if [ -n "$line" ]; then
+            info "Reaplying binding '$line'"
+            BIND_PORT=$(echo "$line" | sed 's/- ".*://g')
+            NEW_COMPOSE=$(sed "s/- \".*:$BIND_PORT\"/- \"$line\"/g" "$BASEDIR/containers/$NODE/docker-compose.yml")
+            echo "$NEW_COMPOSE" > "$BASEDIR/containers/$NODE/docker-compose.yml"
+        fi
+    done < "$BASEDIR/state/binds"
+fi
+
+# run init script
+if [ "$full" = "true" ] || [ "$init" = "true" ]; then
+    get_json_file_value "$DEF_FILE" "init"
+    INIT_SCRIPT="$BASEDIR/containers/$NODE/$JSON_VALUE"
+    if [ -f "$INIT_SCRIPT" ]; then
+        sh "$INIT_SCRIPT"
+    fi
+fi 
+
+# grant docker permissions
+if [ "$full" = "true" ] && [ ! "$disableAutoUpdate" = "true" ] || [ "$grantDocker" = "true" ]; then
+    if [ "$(groups $USER | grep "docker" || echo "true")" = "true" ] && [ "$(groups $USER | grep "root" || echo "true")" = "true" ]; then
+        require_root_priv
+        usermod -a -G docker $USER
+        if [ "$(groups $USER | grep "docker" || echo "true")" = "true" ] && [ "$(groups $USER | grep "root" || echo "true")" = "true" ]; then
+            error "Failed to set docker privileges for user $USER"
+        else 
+            success "Docker privileges granted to $USER"  
+        fi
+    else 
+        success "Docker privileges are already granted to $USER"
+    fi
+fi
+
+serviceDef="$BASEDIR/containers/$NODE/docker-compose.yml"
+# build service
+if [ "$full" = "true" ] || [ "$build" = "true" ]; then
+    if [ "$user" = "true" ]; then
+        runuser -l $USER -c "sh $PATH_TO_AMS -b --passed"
+    else
+        require_docker_priv
+        if [ ! -f "$serviceDef" ]; then
+            error "Cannot find $NODE definition file: $serviceDef"
+            exit 8;
+        fi
+        build_service "$BASEDIR/containers/$NODE/docker-compose.yml" $noCache
+    fi
+fi
+
+# start service
+if [ "$full" = "true" ] || [ "$start" = "true" ]; then
+    if [ "$user" = "true" ]; then
+        runuser -l $USER -c "sh $PATH_TO_AMS -s --passed"
+    else
+        require_docker_priv
+        if [ ! -f "$serviceDef" ]; then
+            error "Cannot find $NODE definition file: $serviceDef"
+            exit 8;
+        fi
+        start_service "$serviceDef" "$forceRecreate"
+        echo "waiting (15s) for MN to start..."
+        sleep 15
+    fi
+fi
+
+# update node binaries through docker build
+if [ "$UPDATE_NODE" = "true" ]; then 
+    info "Updating node..."
+    require_docker_priv
+    DEF_FILE="$BASEDIR/containers/$NODE/def.json"
+    get_json_file_value "$DEF_FILE" "update-node"
+    update_file="$BASEDIR/containers/$NODE/$JSON_VALUE"
+    if [ ! -f "$update_file" ]; then
+        error "Cannot find $NODE update-node file: $update_file"
+        warn "Update node core skipped"
+    fi
+    sh "$BASEDIR/containers/$NODE/$JSON_VALUE"
+    case "$?" in
+    "0")
+        info "Node was updated or running on latest version."
+        ;;
+    "1")
+        error "Masternode is not running, cannot update."
+        ;;
+    "2")
+        error "Failed to update masternode"
+        ;;
+    "3")
+        error "Failed to get node.info"
+        ;;
+    esac
+fi
+
+# configure autoupdate
+if [ "$full" = "true" ] || [ "$autoUpdate" = "true" ]; then
+    if [ ! "$disableAutoUpdate" = "true" ]; then
+        crontab -u $USER -l | grep -v "sh \"$PATH_TO_AMS\" --update-node" > "temp.cron"
+               
+        update_option="--update-node --update-service"
+        if [ -n "$autoUpdateLevel" ]; then
+            case "$autoUpdateLevel" in
+            "0")
+                update_option="--update-node"
+                ;;
+            "node")
+                update_option="--update-node"
+                ;;
+            "1")
+                update_option="--update-node --update-service"
+                ;;
+            "service")
+                update_option="--update-node --update-service"
+                ;;
+            "2") 
+                update_option="--update-node --update-service --update-ams"
+                ;;
+            "all")
+                update_option="--update-node --update-service --update-ams"
+                ;;
+            *) 
+                warn "Unknown auto update level: $autoUpdateLevel"
+                warn "Using default auto update level (0 - node)."
+            esac
+        fi
+        echo "59 23 * * * sh \"$PATH_TO_AMS\" $update_option" >> "temp.cron"
+        crontab -u $USER "temp.cron"
+        rm "temp.cron"
+        crontab -u $USER -l | grep "\"$PATH_TO_AMS\" $update_option" > /dev/null && success "Auto update configured." || error "Failed to configure auto update." 
+
+        if [ "$(groups $USER | grep "docker" || echo "true")" = "true" ] && [ "$(groups $USER | grep "root" || echo "true")" = "true" ]; then
+            warn "User $USER does not have docker privileges and wont be able to auto update."
+            info "HINT: sudo ./ams --grant-docker $USER"
+        fi
+    fi
+fi
+
+# disable autoupdate
+if [ "$disableAutoUpdate" = "true" ]; then
+    crontab -u $USER -l | grep -v "$PATH_TO_AMS --update-node" | crontab -u $USER -
+    crontab -u $USER -l | grep "$PATH_TO_AMS --update-node" && error "Failed to disable auto update." || success "Auto updated disabled" 
+fi
+
+# display infomations about node
+if [ "$full" = "true" ] || [ "$info" = "true" ]; then
+    info "NODE DETAILS:"
+    DEF_FILE="$BASEDIR/containers/$NODE/def.json"
+    get_json_file_value "$DEF_FILE" "node-info"
+    sh "$BASEDIR/containers/$NODE/$JSON_VALUE"
+    info "\
+    ** this node info was also saved into $BASEDIR/data/node.info ** \
+    "
+fi
