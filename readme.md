@@ -1,4 +1,4 @@
-## Automated Masternode Setup (AMS) © cryon.io 2019
+## AUTONOMOUS MASTERNODE SYSTEM (AMS) © cryon.io 2019
 
 ## Prerequisites 
 

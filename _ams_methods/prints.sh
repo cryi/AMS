@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#  AUTOMATED MASTERNODE SETUP
+#  AUTONOMOUS MASTERNODE SYSTEM
 #  Copyright © 2019 cryon.io
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -19,17 +19,17 @@
 #  Contact: cryi@tutanota.com
 
 success() {
-    printf "\033[0;32mSUCCESS: $1 \033[0m\n"
+    printf "\033[0;32mSUCCESS: %s \033[0m\n" "$1"
 }
 
 info() {
-    printf "\033[0;36mINFO: $1 \033[0m\n"
+    printf "\033[0;36mINFO: %s \033[0m\n" "$1"
 }
 
 warn() {
-    printf "\033[0;33mWARN: $1 \033[0m\n"
+    printf "\033[0;33mWARN: %s \033[0m\n" "$1"
 }
 
 error() {
-    printf "\033[0;31mERROR: $1 \033[0m\n"
+    printf "\033[0;31mERROR: %s \033[0m\n" "$1"
 }

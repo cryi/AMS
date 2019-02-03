@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#  AUTOMATED MASTERNODE SETUP
+#  AUTONOMOUS MASTERNODE SYSTEM
 #  Copyright © 2019 cryon.io
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -26,15 +26,16 @@ if [ -f "$METHODS_DIR/../tools/allow-container-write.sh" ]; then
 fi
 
 if [ -f "$METHODS_DIR/tools/allow-container-write.sh"  ]; then 
+    # shellcheck disable=SC2034
     ALLOW_WRITE_TOOL_PATH="$METHODS_DIR/tools/allow-container-write.sh" 
 fi
 
 build_service() {
-    docker-compose -f $1 build $2
+    docker-compose -f "$1" build "$2"
 }
 
 start_service() {
-    docker-compose -f $1 up -d --remove-orphans $2
+    docker-compose -f "$1" up -d --remove-orphans "$2"
 }
 
 stop_service() {

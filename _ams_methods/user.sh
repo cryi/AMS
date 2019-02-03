@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#  AUTOMATED MASTERNODE SETUP
+#  AUTONOMOUS MASTERNODE SYSTEM
 #  Copyright © 2019 cryon.io
 #
 #  This program is free software: you can redistribute it and/or modify

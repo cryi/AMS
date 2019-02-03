@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#  AUTOMATED MASTERNODE SETUP
+#  AUTONOMOUS MASTERNODE SYSTEM
 #  Copyright © 2019 cryon.io
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -94,5 +94,6 @@ repo_link_to_raw_link() {
 }
 
 get_latest_github_release() {
+    # shellcheck disable=SC2034
     RESULT=$(curl -sL "https://api.github.com/repos/$1/releases/latest" | jq ".[\"tag_name\"]" -r 2>/dev/null)                            
 }

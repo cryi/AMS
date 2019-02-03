@@ -9,6 +9,7 @@ command_exists() {
 get_dist_version() {
     dist=""
 	if [ -r /etc/os-release ]; then
+		# shellcheck disable=SC1091
 		dist="$(. /etc/os-release && echo "$ID")"
 	fi
     case "$dist" in
@@ -17,6 +18,7 @@ get_dist_version() {
 				dist_version="$(lsb_release --codename | cut -f2)"
 			fi
 			if [ -z "$dist_version" ] && [ -r /etc/lsb-release ]; then
+				# shellcheck disable=SC1091
 				dist_version="$(. /etc/lsb-release && echo "$DISTRIB_CODENAME")"
 			fi
 		;;
@@ -35,6 +37,7 @@ get_dist_version() {
 
 		centos)
 			if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
+				# shellcheck disable=SC1091
 				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
 			fi
 		;;
@@ -49,6 +52,7 @@ get_dist_version() {
 				dist_version="$(lsb_release --release | cut -f2)"
 			fi
 			if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
+				# shellcheck disable=SC1091
 				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
 			fi
 		;;

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#  AUTOMATED MASTERNODE SETUP
+#  AUTONOMOUS MASTERNODE SYSTEM
 #  Copyright © 2019 cryon.io
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 
 script_usage() {
     cat << EOF
-                    == Automated Masternode Setup ==
+                    == AUTONOMOUS MASTERNODE SYSTEM ==
 
 Usage:
     -h|--help                           Displays this help message.

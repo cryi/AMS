@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#  AUTOMATED MASTERNODE SETUP
+#  AUTONOMOUS MASTERNODE SYSTEM
 #  Copyright © 2019 cryon.io
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -22,10 +22,12 @@ PATH_TO_SCRIPT=$(readlink -f "$0")
 METHODS_DIR=$(dirname "$PATH_TO_SCRIPT")
 
 if [ -f "$METHODS_DIR/util.sh" ]; then 
+    # shellcheck disable=SC1090
     . "$METHODS_DIR/util.sh" 
 fi
 
 if [ -f "$METHODS_DIR/_ams_methods/util.sh"  ]; then 
+    # shellcheck disable=SC1090
     . "$METHODS_DIR/_ams_methods/util.sh" 
 fi
 
@@ -38,6 +40,7 @@ get_node_type() {
 
     if [ -n "$NODE" ]; then 
         if [ -n "$TEMP_NODE" ] && [ ! "$TEMP_NODE" = "null" ] && [ ! "$TEMP_NODE" = "$NODE" ]; then    
+            # shellcheck disable=SC2034
             OLD_NODE=$TEMP_NODE
             # changing setup node
             return 1
