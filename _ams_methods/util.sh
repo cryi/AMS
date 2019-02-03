@@ -79,12 +79,12 @@ update_repository() {
     fi
 }
 
-# converts repo link to specific file raw link
+# converts repository link to specific file raw link
 # $1 - url to repository
 # $2 - file path relative to repository
 # $3 - branch (default master)
 # returns $RESULT
-repo_link_to_raw_link() {
+repository_link_to_raw_link() {
     BRANCH=$3
     if [ -z "$BRANCH" ]; then 
         BRANCH=master 

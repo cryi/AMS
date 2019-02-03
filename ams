@@ -40,16 +40,16 @@ AMS_VERSION_URL="https://raw.githubusercontent.com/cryi/AMS/master/version.json"
 # shellcheck disable=SC1090
 . "$BASEDIR/_ams_methods/dist_info.sh"
 
-require_root_priv() {
+require_root_privileges() {
     if [ ! "$(id -u)" = 0 ] ; then
-        error "This option requires root (or sudo) privilages"
+        error "This option requires root (or sudo) privileges"
         exit 1
     fi
 }
 
-require_docker_priv() {
+require_docker_privileges() {
     if [ "$(groups | grep "docker" || echo "true")" = "true" ] && [ "$(groups | grep "root" || echo "true")" = "true" ]; then
-        error "This option requires docker privilages. Either run ams as root or grant user docker privilages."
+        error "This option requires docker privileges. Either run ams as root or grant user docker privileges."
         info "HINT: sudo ./ams --grant-docker"
         exit 2
     fi
@@ -75,7 +75,7 @@ parse_params() {
                 ;;
             -f|--full)
                 full=true
-                REAPLY_STATE=true
+                REAPPLY_STATE=true
                 noCache="--no-cache"
                 forceRecreate="--force-recreate"
                 ;;
@@ -88,16 +88,16 @@ parse_params() {
                 ;; 
             -r|--restart)
                 start=true
-                REAPLY_STATE=true
+                REAPPLY_STATE=true
                 forceRecreate="--force-recreate"
                 ;;    
             -b|--build)
                 build=true
-                REAPLY_STATE=true
+                REAPPLY_STATE=true
                 ;;
             -s|--start)
                 start=true
-                REAPLY_STATE=true
+                REAPPLY_STATE=true
                 ;;   
             --stop)
                 stop=true
@@ -107,11 +107,11 @@ parse_params() {
                 ;;
             -us|--update-service)
                 UPDATE_SERVICE=true
-                REAPLY_STATE=true
+                REAPPLY_STATE=true
                 ;;
             -uc|--update-ams)
                 UPDATE_AMS=true
-                REAPLY_STATE=true
+                REAPPLY_STATE=true
                 ;;
             -au|--auto-update)
                 grantDocker=true
@@ -133,7 +133,7 @@ parse_params() {
                 disableAutoUpdate=true
                 ;;
             -rfp|--restore-file-permissions)
-                restoreFilePermisions=true
+                restoreFilePermissions=true
                 ;;
             -gd|--grant-docker)
                 grantDocker=true
@@ -174,7 +174,8 @@ parse_params() {
                 exit 2
                 ;;
             *)
-                break;
+                warn "Missing hyphen - ignoring '$arg'"
+                ;;
         esac
     done
 }
@@ -203,10 +204,10 @@ if [ -n "$SPECIFIC_USER" ]; then
 fi
 
 if [ "$user" = "true" ]; then
-    require_root_priv 
+    require_root_privileges 
     
     if create_user "$USER"; then 
-        success "$USER successfuly created.";
+        success "$USER successfully created.";
     else 
         error "Failed to create $USER"
         exit 4
@@ -214,7 +215,7 @@ if [ "$user" = "true" ]; then
 fi
 
 if [ "$full" = "true" ] || [ "$dependencies" = "true" ]; then
-    require_root_priv
+    require_root_privileges
 
     dist=$(get_dist_version)
 
@@ -299,13 +300,13 @@ if [ "$RESULT" = "2" ]; then
     exit 6
 elif [ "$RESULT" = "1" ]; then
     info "Stopping old node: $OLD_NODE"
-    require_docker_priv
+    require_docker_privileges
     stop_service "$BASEDIR/containers/$OLD_NODE/docker-compose.yml"
     NEW_NODE=true
 fi
 
 if [ -n "$NODE" ] && [ "$stop" = "true" ]; then
-    require_docker_priv
+    require_docker_privileges
     stop_service "$BASEDIR/containers/$NODE/docker-compose.yml"
 fi
 
@@ -352,7 +353,7 @@ if [ "$full" = "true" ] || [ "$UPDATE_AMS" = "true" ]; then
         info "Updating ams"
         update_repository "$BASEDIR" "$AMS_BRANCH"
         chmod +x "$PATH_TO_AMS"
-        restoreFilePermisions=true
+        restoreFilePermissions=true
     fi
 fi
 
@@ -367,7 +368,7 @@ fi
 # update service
 if [ "$full" = "true" ] || [ "$UPDATE_SERVICE" = "true" ]; then
     REPOSITORY_URL=$(jq ".$NODE" "$BASEDIR/supported_nodes.json" -r 2>/dev/null)
-    repo_link_to_raw_link "$REPOSITORY_URL" "def.json"
+    repository_link_to_raw_link "$REPOSITORY_URL" "def.json"
     NODE_DEF=$(curl -fsL "$RESULT")
     if [ -z "$NODE_DEF" ]; then
         error "Failed to obtain node service definition. Please retry..."
@@ -386,7 +387,7 @@ if [ "$full" = "true" ] || [ "$UPDATE_SERVICE" = "true" ]; then
     if [ "$(echo "$LATEST_VER"' > '"$SERVICE_VER" | bc -l)" = "1" ]; then 
         info "Updating service definition"
         update_repository "$BASEDIR/containers/$NODE"
-        restoreFilePermisions=true
+        restoreFilePermissions=true
         build=true
         start=true
         noCache="--no-cache"
@@ -403,8 +404,8 @@ if [ ! "$passed" = "true" ]; then
 fi
 
 # set fs permissions
-if [ "$full" = "true" ] || [ "$restoreFilePermisions" = "true" ]; then
-    require_root_priv
+if [ "$full" = "true" ] || [ "$restoreFilePermissions" = "true" ]; then
+    require_root_privileges
     create_group "ams"
     REAL_USER=$(who am i | awk '{print $1}')
     add_user_to_group "$USER" "ams"
@@ -439,10 +440,10 @@ if [ "$setEnv" = "true" ]; then
                 ;;
         esac
     done
-elif [ -f "$BASEDIR/state/environment" ] && [ "$REAPLY_STATE" = "true" ] && [ ! "$passed" = "true" ]; then
+elif [ -f "$BASEDIR/state/environment" ] && [ "$REAPPLY_STATE" = "true" ] && [ ! "$passed" = "true" ]; then
     while IFS= read -r line; do
         if [ -n "$line" ]; then
-            info "Reaplying env variable '$line'"
+            info "Reapplying env variable '$line'"
             if [ -f "$ENV_SETTER" ]; then
                 sh "$ENV_SETTER" "$line" 
             fi
@@ -467,10 +468,10 @@ if [ "$setParams" = "true" ]; then
                 ;;
         esac
     done
-elif [ -f "$BASEDIR/state/parameters" ] && [ "$REAPLY_STATE" = "true" ] && [ ! "$passed" = "true" ]; then
+elif [ -f "$BASEDIR/state/parameters" ] && [ "$REAPPLY_STATE" = "true" ] && [ ! "$passed" = "true" ]; then
     while IFS= read -r line; do
         if [ -n "$line" ]; then
-            info "Reaplying parameter '$line'"
+            info "Reapplying parameter '$line'"
             if [ -f "$PARAM_SETTER" ]; then
                 sh "$PARAM_SETTER" "$line" 
             fi
@@ -493,10 +494,10 @@ if [ "$bind" = "true" ]; then
                 ;;
         esac
     done
-elif [ -f "$BASEDIR/state/binds" ] && [ "$REAPLY_STATE" = "true" ] && [ ! "$passed" = "true" ]; then
+elif [ -f "$BASEDIR/state/binds" ] && [ "$REAPPLY_STATE" = "true" ] && [ ! "$passed" = "true" ]; then
     while IFS= read -r line; do
         if [ -n "$line" ]; then
-            info "Reaplying binding '$line'"
+            info "Reapplying binding '$line'"
             BIND_PORT=$(echo "$line" | sed 's/- ".*://g')
             NEW_COMPOSE=$(sed "s/- \".*:$BIND_PORT\"/- \"$line\"/g" "$BASEDIR/containers/$NODE/docker-compose.yml")
             echo "$NEW_COMPOSE" > "$BASEDIR/containers/$NODE/docker-compose.yml"
@@ -507,7 +508,7 @@ fi
 # grant docker permissions
 if [ "$full" = "true" ] && [ ! "$disableAutoUpdate" = "true" ] || [ "$grantDocker" = "true" ]; then
     if [ "$(groups "$USER" | grep "docker" || echo "true")" = "true" ] && [ "$(groups "$USER" | grep "root" || echo "true")" = "true" ]; then
-        require_root_priv
+        require_root_privileges
         usermod -a -G docker "$USER"
         if [ "$(groups "$USER" | grep "docker" || echo "true")" = "true" ] && [ "$(groups "$USER" | grep "root" || echo "true")" = "true" ]; then
             error "Failed to set docker privileges for user $USER"
@@ -534,7 +535,7 @@ if [ "$full" = "true" ] || [ "$build" = "true" ]; then
     if [ "$user" = "true" ]; then
         runuser -l "$USER" -c "sh $PATH_TO_AMS -b --passed"
     else
-        require_docker_priv
+        require_docker_privileges
         if [ ! -f "$serviceDef" ]; then
             error "Cannot find $NODE definition file: $serviceDef"
             exit 8;
@@ -548,7 +549,7 @@ if [ "$full" = "true" ] || [ "$start" = "true" ]; then
     if [ "$user" = "true" ]; then
         runuser -l "$USER" -c "sh $PATH_TO_AMS -s --passed"
     else
-        require_docker_priv
+        require_docker_privileges
         if [ ! -f "$serviceDef" ]; then
             error "Cannot find $NODE definition file: $serviceDef"
             exit 8;
@@ -571,7 +572,7 @@ fi
 # update node binaries through docker build
 if [ "$UPDATE_NODE" = "true" ]; then 
     info "Updating node..."
-    require_docker_priv
+    require_docker_privileges
     DEF_FILE="$BASEDIR/containers/$NODE/def.json"
     get_json_file_value "$DEF_FILE" "update-node"
     update_file="$BASEDIR/containers/$NODE/$JSON_VALUE"
@@ -596,7 +597,7 @@ if [ "$UPDATE_NODE" = "true" ]; then
     esac
 fi
 
-# configure autoupdate
+# configure auto update
 if [ "$full" = "true" ] || [ "$autoUpdate" = "true" ]; then
     if [ ! "$disableAutoUpdate" = "true" ]; then
         crontab -u "$USER" -l | grep -v "sh \"$PATH_TO_AMS\" --update-node" > "temp.cron"
@@ -640,14 +641,14 @@ if [ "$full" = "true" ] || [ "$autoUpdate" = "true" ]; then
     fi
 fi
 
-# disable autoupdate
+# disable auto update
 if [ "$disableAutoUpdate" = "true" ]; then
     crontab -u "$USER" -l | grep -v "$PATH_TO_AMS --update-node" | crontab -u "$USER" -
     # shellcheck disable=SC2015
     crontab -u "$USER" -l | grep "$PATH_TO_AMS --update-node" && error "Failed to disable auto update." || success "Auto updated disabled" 
 fi
 
-# display infomations about node
+# display information about node
 if [ "$full" = "true" ] || [ "$info" = "true" ]; then
     info "NODE DETAILS:"
     DEF_FILE="$BASEDIR/containers/$NODE/def.json"

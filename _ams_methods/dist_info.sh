@@ -19,7 +19,7 @@ get_dist_version() {
 			fi
 			if [ -z "$dist_version" ] && [ -r /etc/lsb-release ]; then
 				# shellcheck disable=SC1091
-				dist_version="$(. /etc/lsb-release && echo "$DISTRIB_CODENAME")"
+				dist_version="$(. /etc/lsb-release && printf "%s" "$DISTRIB_CODENAME")"
 			fi
 		;;
 

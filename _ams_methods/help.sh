@@ -27,21 +27,21 @@ Usage:
 
     -dau|--disable-auto-update          Removes auto update from cron job
     
-    --user=[user]                       Creates user if not exists and starts docker from this user. (docker rights are asigned automatically)
+    --user=[user]                       Creates user if not exists and starts docker from this user. (docker rights are assigned automatically)
     --node=[node type]                  Defines type of node to manage
     --stop                              Stops masternode
     -se=[env_var]|--set-env=[env_var]   Sets masternode env variable (Refer to per coin docs)
     -sp=[param]|--set-parameter=[param] Sets masternode parameter (Refer to per coin docs)
     --bind=[binding]                    Sets binding for specified port. 
                                         E.g.: --bind=127.0.0.1:3000:30305 # binds port 30305 from node to ip 127.0.0.1 port 3000
-    --ams-branch=[branch]               Selets branch from AMS repository
+    --ams-branch=[branch]               Selects branch from AMS repository
 
     -f|--full                           Runs all of the commands below.
 
     -sd|--setup-dependencies            Installs masternode dependencies
-    -gd|--grant-docker                  Adds CURRENT user into docker group, so you can control docker without sudo and autoupdate node
+    -gd|--grant-docker                  Adds CURRENT user into docker group, so you can control docker without sudo and auto update node
                                         # In case of --full arg, can be disabled by -dau
-    -gd=[user]|--grant-docker=[user]    Adds SPECIFIC user into docker group, so you can control docker without sudo and autoupdate
+    -gd=[user]|--grant-docker=[user]    Adds SPECIFIC user into docker group, so you can control docker without sudo and auto update
                                         # In case of --full arg, can be disabled by -dau
     
     -b|--build                          Builds masternode based on node service definition 
@@ -64,15 +64,15 @@ Usage:
 
     EXAMPLES:
     # setup as root
-    1. setup as root with autoupdate
+    1. setup as root with auto update
     ./ams -f
-    2. setup as root, running on [user] with autoupdate
+    2. setup as root, running on [user] with auto update
     ./ams -f --user=[user]
 
     # setup as non root (requires sudo)
-    1. setup as non root for current user with autoupdate
+    1. setup as non root for current user with auto update
     sudo ./ams -f
-    2. setup as non root, running on [user] with full auto update autoupdate
+    2. setup as non root, running on [user] with full auto update auto update
     sudo ./ams -f --user=[user] --aul=2
 
 EOF

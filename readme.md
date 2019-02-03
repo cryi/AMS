@@ -18,7 +18,7 @@
 
 Check out wiki for list of [Supported Node Types](https://github.com/cryi/AMS/wiki/Supported-Node-Types). 
 
-### Quickstart
+### Quick Start
 
 Note: *All parameters inside [] has to be submitted without [], e.g. `--user=[user]` as `--user=etho`*
 
@@ -26,7 +26,7 @@ Note: *All parameters inside [] has to be submitted without [], e.g. `--user=[us
    2. `chmod +x ./ams`
 2. one of commands below depending of your preference (run as *root* or use *sudo*)
     - `./ams --full --node=[node_type]` # full setup of specific node for current user
-    - `./ams --full --user=[user] --node=[node_type] --auto-update-level=[level]` # full setup of specific node for defined user (directory location and structure is preserved), sets specified auto update level (Refer to [Autoupdates](https://github.com/cryi/AMS/wiki/Autoupdates))
+    - `./ams --full --user=[user] --node=[node_type] --auto-update-level=[level]` # full setup of specific node for defined user (directory location and structure is preserved), sets specified auto update level (Refer to [Auto updates](https://github.com/cryi/AMS/wiki/Autoupdates))
     - `./ams --full --user=[user] --node=[node_type] --auto-update-level=[level] -se=ip=[IP address] -se=masternodeprivkey=[privkey]`
         * Refer to per coin documentation for usage of env variables and parameters (`-se=*|--set-env=*|-sp=*|--set-parameter=*`)
 3. logout, login and check node status
