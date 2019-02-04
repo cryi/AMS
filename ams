@@ -525,7 +525,12 @@ if [ "$full" = "true" ] || [ "$build" = "true"  ]; then
     get_json_file_value "$DEF_FILE" "before-start"
     BEFORE_START_SCRIPT="$BASEDIR/containers/$NODE/$JSON_VALUE"
     if [ -f "$BEFORE_START_SCRIPT" ]; then
-        sh "$BEFORE_START_SCRIPT"
+        if sh "$BEFORE_START_SCRIPT"; then 
+            info "before-start initialization successful"
+        else 
+            error "Failed to finish before-start initialization"
+            exit 12
+        fi
     fi
 fi 
 

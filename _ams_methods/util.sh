@@ -26,7 +26,6 @@
 # $3 - value
 set_json_file_value() {
     if [ -s "$1" ]; then 
-    
         JSON_VALUE=$(jq ". = if has(\"$2\") then .[\"$2\"] = \"$3\" else . + { \"$2\" : \"$3\" } end " "$1" )
         if [ -z "$JSON_VALUE" ]; then
             JSON_VALUE="{ \"$2\":\"$3\" }"
