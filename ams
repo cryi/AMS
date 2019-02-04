@@ -169,6 +169,9 @@ parse_params() {
             --ams-branch=*)
                 AMS_BRANCH=$(echo "$arg" | sed 's/--ams-branch=//g')
                 ;;
+            --docker-prune)
+                dockerPrune=true
+                ;;
             -?*)
                 echo "Invalid parameter was provided: $arg"
                 exit 2
@@ -180,6 +183,10 @@ parse_params() {
     done
 }
 parse_params "$@"
+
+if [ "$dockerPrune" = "true" ]; then
+    docker system prune
+fi
 
 update_current_user
 if [ -n "$SPECIFIC_USER" ]; then 

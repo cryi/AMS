@@ -1,5 +1,14 @@
 ## AUTONOMOUS MASTERNODE SYSTEM (AMS) © cryon.io 2019
 
+- modular and transparent
+- simple setup and management
+- auto updates to both AMS and the masternode software (speeds up and simplifies masternode network upgrades)
+- health checks with auto-heal to maximize uptime
+- simplifies development (devs can target and test specific OS while AMS provides support for main server side OSes)
+- security - all modules are audited (does not include audit of node code)
+
+Disclaimer: *AMS does not secure your server/VPS, as we believe that security configurations should be setup-specific, and security for multiple OSes would increase AMS's complexity. All setups provided by AMS are created as a hot-cold wallet scheme - your funds are stored safely on your local computer.*
+
 ## Prerequisites 
 
 1. 64-bit installation
@@ -18,12 +27,17 @@
 
 Check out wiki for list of [Supported Node Types](https://github.com/cryi/AMS/wiki/Supported-Node-Types). 
 
+### Contributions
+
+Check out [Contributions Wiki Page](https://github.com/cryi/AMS/wiki/Contributions)
+
 ### Quick Start
 
 Note: *All parameters inside [] has to be submitted without [], e.g. `--user=[user]` as `--user=etho`*
 
-1. 1. `git clone "https://github.com/cryi/AMS.git" [path] && cd [path]` # replace path with directory you want to store node in
-   2. `chmod +x ./ams`
+1. - `git clone "https://github.com/cryi/AMS.git" [path] && cd [path] && chmod +x ./ams` # replace path with directory you want to store node in
+   or 
+   - `wget https://github.com/cryi/AMS/archive/master.zip && unzip -o master.zip && mv ./AMS-master [path] && cd [path] && chmod +x ./ams`
 2. one of commands below depending of your preference (run as *root* or use *sudo*)
     - `./ams --full --node=[node_type]` # full setup of specific node for current user
     - `./ams --full --user=[user] --node=[node_type] --auto-update-level=[level]` # full setup of specific node for defined user (directory location and structure is preserved), sets specified auto update level (Refer to [Auto updates](https://github.com/cryi/AMS/wiki/Autoupdates))

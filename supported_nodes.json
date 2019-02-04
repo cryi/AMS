@@ -1,5 +1,7 @@
 {
     "ETHO_SN" : "https://github.com/cryi/docker-etho-sn.git",
     "ETHO_MN" : "https://github.com/cryi/docker-etho-mn.git",
-    "GINCOIN_MN" : "https://github.com/cryi/docker-gincoin-mn.git"
+    "GINCOIN_MN" : "https://github.com/cryi/docker-gincoin-mn.git",
+    "ULEAD_MN" : "https://github.com/cryi/docker-ulead-mn.git",
+    "SMARTCASH_SMART" :"https://github.com/cryi/docker-smartcash-smartnode.git"
 }

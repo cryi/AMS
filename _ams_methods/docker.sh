@@ -31,11 +31,19 @@ if [ -f "$METHODS_DIR/tools/allow-container-write.sh"  ]; then
 fi
 
 build_service() {
-    docker-compose -f "$1" build "$2"
+    if [ -n "$2" ]; then  
+        docker-compose -f "$1" build "$2"
+    else 
+        docker-compose -f "$1" build
+    fi
 }
 
 start_service() {
-    docker-compose -f "$1" up -d --remove-orphans "$2"
+    if [ -n "$2" ]; then  
+        docker-compose -f "$1" up -d --remove-orphans "$2"
+    else 
+        docker-compose -f "$1" up -d --remove-orphans
+    fi
 }
 
 stop_service() {

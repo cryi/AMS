@@ -35,6 +35,7 @@ Usage:
     --bind=[binding]                    Sets binding for specified port. 
                                         E.g.: --bind=127.0.0.1:3000:30305 # binds port 30305 from node to ip 127.0.0.1 port 3000
     --ams-branch=[branch]               Selects branch from AMS repository
+    --docker-prune                      Runs docker system cleanup. Requires confirmations. (Removes old containers and images)
 
     -f|--full                           Runs all of the commands below.
 
