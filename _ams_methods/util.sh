@@ -48,7 +48,7 @@ get_json_file_value() {
 # $1 string
 # $2 key
 get_json_value() {
-    JSON_VALUE=$(echo "$1" | jq ".[\"$2\"]" -r 2>/dev/null)
+    JSON_VALUE=$(printf "%s\n" "$1" | jq ".[\"$2\"]" -r 2>/dev/null)
 }
 
 # clones git repository to specified folder
@@ -68,7 +68,7 @@ clone_repository() {
 update_repository() {
     if [ -d "$1" ]; then
         BRANCH=$2
-        if [ -z "$BRANCH" ]; then 
+        if [ -z "$BRANCH" ] || [ "$BRANCH" = "null" ]; then 
             BRANCH=master 
         fi
         git --git-dir="$1/.git" --work-tree="$1" fetch --all && git --git-dir="$1/.git" --work-tree="$1" reset --hard "origin/$BRANCH"

@@ -114,17 +114,14 @@ parse_params() {
                 REAPPLY_STATE=true
                 ;;
             -au|--auto-update)
-                grantDocker=true
                 autoUpdate=true
                 ;;
             -au=*|--auto-update=*)
-                grantDocker=true
                 autoUpdate=true
                 SPECIFIC_USER=$(echo "$arg" | sed 's/-au=//g')
                 SPECIFIC_USER=$(echo "$SPECIFIC_USER" | sed 's/--auto-update=//g')
                 ;;   
             -aul=*|--auto-update-level=*)
-                grantDocker=true
                 autoUpdate=true
                 autoUpdateLevel=$(echo "$arg" | sed 's/-aul=//g')
                 autoUpdateLevel=$(echo "$autoUpdateLevel" | sed 's/--auto-update-level=//g')    
@@ -346,9 +343,8 @@ if [ -z "$AMS_BRANCH" ]; then
     fi 
     if [ -z "$AMS_BRANCH" ]; then 
         AMS_BRANCH=master
-    else 
-        set_json_file_value "$BASEDIR/state/conf.json" "branch" "$AMS_BRANCH"
-    fi
+    fi 
+    set_json_file_value "$BASEDIR/state/conf.json" "branch" "$AMS_BRANCH"
 fi
 
 # update ams
@@ -612,7 +608,8 @@ fi
 # configure auto update
 if [ "$full" = "true" ] || [ "$autoUpdate" = "true" ]; then
     if [ ! "$disableAutoUpdate" = "true" ]; then
-        crontab -u "$USER" -l | grep -v "sh \"$PATH_TO_AMS\" --update-node" > "temp.cron"
+        require_root_privileges
+        crontab -u "root" -l | grep -v "sh \"$PATH_TO_AMS\" --update-node" > "temp.cron"
                
         update_option="--update-node --update-service"
         if [ -n "$autoUpdateLevel" ]; then
@@ -641,23 +638,18 @@ if [ "$full" = "true" ] || [ "$autoUpdate" = "true" ]; then
             esac
         fi
         echo "59 23 * * * sh \"$PATH_TO_AMS\" $update_option" >> "temp.cron"
-        crontab -u "$USER" "temp.cron"
+        crontab -u "root" "temp.cron"
         rm "temp.cron"
         # shellcheck disable=SC2015
-        crontab -u "$USER" -l | grep "\"$PATH_TO_AMS\" $update_option" > /dev/null && success "Auto update configured." || error "Failed to configure auto update." 
-
-        if [ "$(groups "$USER" | grep "docker" || echo "true")" = "true" ] && [ "$(groups "$USER" | grep "root" || echo "true")" = "true" ]; then
-            warn "User $USER does not have docker privileges and wont be able to auto update."
-            info "HINT: sudo ./ams --grant-docker $USER"
-        fi
+        crontab -u "root" -l | grep "\"$PATH_TO_AMS\" $update_option" > /dev/null && success "Auto update configured." || error "Failed to configure auto update." 
     fi
 fi
 
 # disable auto update
 if [ "$disableAutoUpdate" = "true" ]; then
-    crontab -u "$USER" -l | grep -v "$PATH_TO_AMS --update-node" | crontab -u "$USER" -
+    crontab -u "root" -l | grep -v "$PATH_TO_AMS --update-node" | crontab -u "root" -
     # shellcheck disable=SC2015
-    crontab -u "$USER" -l | grep "$PATH_TO_AMS --update-node" && error "Failed to disable auto update." || success "Auto updated disabled" 
+    crontab -u "root" -l | grep "$PATH_TO_AMS --update-node" && error "Failed to disable auto update." || success "Auto updated disabled" 
 fi
 
 # display information about node
