@@ -637,7 +637,7 @@ if [ "$full" = "true" ] || [ "$autoUpdate" = "true" ]; then
                 warn "Using default auto update level (0 - node)."
             esac
         fi
-        echo "59 23 * * * sh \"$PATH_TO_AMS\" $update_option" >> "temp.cron"
+        echo "59 23 * * * sh \"$PATH_TO_AMS\" $update_option > /var/log/ams-update.log" >> "temp.cron"
         crontab -u "root" "temp.cron"
         rm "temp.cron"
         # shellcheck disable=SC2015
