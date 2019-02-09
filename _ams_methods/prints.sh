@@ -19,17 +19,21 @@
 #  Contact: cryi@tutanota.com
 
 success() {
-    printf "\033[0;32mSUCCESS: %s \033[0m\n" "$1"
+    time=$(date +%H:%M:%S)
+    printf "\033[0;32m%s SUCCESS: %s \033[0m\n" "$time" "$1"
 }
 
 info() {
-    printf "\033[0;36mINFO: %s \033[0m\n" "$1"
+    time=$(date +%H:%M:%S)
+    printf "\033[0;36m%s INFO: %s \033[0m\n" "$time" "$1"
 }
 
 warn() {
-    printf "\033[0;33mWARN: %s \033[0m\n" "$1"
+    time=$(date +%H:%M:%S)
+    printf "\033[0;33m%s WARN: %s \033[0m\n" "$time" "$1"
 }
 
 error() {
-    printf "\033[0;31mERROR: %s \033[0m\n" "$1"
+    time=$(date +%H:%M:%S)
+    printf "\033[0;31m%s ERROR: %s \033[0m\n" "$time" "$1"
 }

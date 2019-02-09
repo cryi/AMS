@@ -528,6 +528,7 @@ if [ "$full" = "true" ] || [ "$build" = "true"  ]; then
     get_json_file_value "$DEF_FILE" "before-start"
     BEFORE_START_SCRIPT="$BASEDIR/containers/$NODE/$JSON_VALUE"
     if [ -f "$BEFORE_START_SCRIPT" ]; then
+        info "Running before-start init script"
         if sh "$BEFORE_START_SCRIPT"; then 
             info "before-start initialization successful"
         else 
@@ -573,6 +574,7 @@ if [ "$full" = "true" ] || [ "$start" = "true" ]; then
     get_json_file_value "$DEF_FILE" "on-start"
     ON_START_SCRIPT="$BASEDIR/containers/$NODE/$JSON_VALUE"
     if [ -f "$ON_START_SCRIPT" ]; then
+        info "Running on-start init script"
         sh "$ON_START_SCRIPT"
     fi
 fi 
