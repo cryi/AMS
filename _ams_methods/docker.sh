@@ -18,18 +18,6 @@
 #
 #  Contact: cryi@tutanota.com
 
-PATH_TO_SCRIPT=$(readlink -f "$0")
-METHODS_DIR=$(dirname "$PATH_TO_SCRIPT")
-
-if [ -f "$METHODS_DIR/../tools/allow-container-write.sh" ]; then 
-    ALLOW_WRITE_TOOL_PATH="$METHODS_DIR/../tools/allow-container-write.sh" 
-fi
-
-if [ -f "$METHODS_DIR/tools/allow-container-write.sh"  ]; then 
-    # shellcheck disable=SC2034
-    ALLOW_WRITE_TOOL_PATH="$METHODS_DIR/tools/allow-container-write.sh" 
-fi
-
 build_service() {
     if [ -n "$2" ]; then  
         docker-compose -f "$1" build "$2"
@@ -40,14 +28,14 @@ build_service() {
 
 start_service() {
     if [ -n "$2" ]; then  
-        docker-compose -f "$1" up -d --remove-orphans "$2"
+        docker-compose -f "$1" up -d --remove-orphans -t "${DOCKER_TIMEOUT:-120}" "$2"
     else 
-        docker-compose -f "$1" up -d --remove-orphans
+        docker-compose -f "$1" up -d --remove-orphans -t "${DOCKER_TIMEOUT:-120}"
     fi
 }
 
 stop_service() {
     if [ -f "$1" ]; then
-        docker-compose -f "$1" down
+        docker-compose -f "$1" down -t "${DOCKER_TIMEOUT:-120}"
     fi 
 }

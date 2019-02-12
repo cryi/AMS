@@ -27,12 +27,10 @@
 set_json_file_value() {
     if [ -s "$1" ]; then 
         JSON_VALUE=$(jq ". = if has(\"$2\") then .[\"$2\"] = \"$3\" else . + { \"$2\" : \"$3\" } end " "$1" )
-        if [ -z "$JSON_VALUE" ]; then
-            JSON_VALUE="{ \"$2\":\"$3\" }"
-        fi 
-        echo "$JSON_VALUE" > "$1" # in case json file is invalid, we will overwrite it
+        altValue="{ \"$2\":\"$3\" }"
+        printf "%s\n" "${JSON_VALUE:-$altValue}" > "$1" # in case json file is invalid, we will overwrite it
     else 
-        echo "{ \"$2\":\"$3\" }" > "$1"
+        printf "%s\n" "{ \"$2\":\"$3\" }" > "$1"
     fi
 } 
 
@@ -41,6 +39,7 @@ set_json_file_value() {
 # $2 key
 get_json_file_value() {
     JSON_VALUE=$(jq ".[\"$2\"]" "$1" -r 2>/dev/null)
+    JSON_VALUE=$(if [ ! "$JSON_VALUE" = "null" ]; then printf "%s" "$JSON_VALUE"; fi)
 }
 
 
@@ -49,6 +48,7 @@ get_json_file_value() {
 # $2 key
 get_json_value() {
     JSON_VALUE=$(printf "%s\n" "$1" | jq ".[\"$2\"]" -r 2>/dev/null)
+    JSON_VALUE=$(if [ ! "$JSON_VALUE" = "null" ]; then printf "%s" "$JSON_VALUE"; fi)
 }
 
 # clones git repository to specified folder
@@ -67,10 +67,8 @@ clone_repository() {
 # $1 - path
 update_repository() {
     if [ -d "$1" ]; then
-        BRANCH=$2
-        if [ -z "$BRANCH" ] || [ "$BRANCH" = "null" ]; then 
-            BRANCH=master 
-        fi
+        BRANCH=${2:-master}
+
         git --git-dir="$1/.git" --work-tree="$1" fetch --all && git --git-dir="$1/.git" --work-tree="$1" reset --hard "origin/$BRANCH"
         return 0
     else 
@@ -84,10 +82,7 @@ update_repository() {
 # $3 - branch (default master)
 # returns $RESULT
 repository_link_to_raw_link() {
-    BRANCH=$3
-    if [ -z "$BRANCH" ]; then 
-        BRANCH=master 
-    fi
+    BRANCH=${3:-master}
     TEMP=$(echo "$1" | sed 's/https\:\/\/github\.com/https\:\/\/raw\.githubusercontent.com/g' | sed 's/.git$/\//g')
     RESULT="$TEMP$BRANCH/$2"
 }

@@ -22,9 +22,7 @@
 # updates USER to real user in case we are in login shell and used sudo
 update_current_user() {
     REAL_USER=$(who am i | awk '{print $1}')
-    if [ -n "$REAL_USER" ]; then 
-        USER=$REAL_USER 
-    fi
+    USER=${REAL_USER:-$USER}
 }
 
 create_user() {

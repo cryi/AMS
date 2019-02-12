@@ -186,26 +186,7 @@ if [ "$dockerPrune" = "true" ]; then
 fi
 
 update_current_user
-if [ -n "$SPECIFIC_USER" ]; then 
-    USER=$SPECIFIC_USER 
-    
-    case "$BASEDIR" in 
-        /home/*)
-            case "$BASEDIR" in
-                /home/$USER/*) ;;
-                /home/$USER) ;;
-                *) wrongHomeDir=true ;; 
-            esac 
-            ;;
-        /root/*) wrongHomeDir=true ;;
-    esac
-
-    if [ "$wrongHomeDir" = "true" ]; then
-        error "AMS cannot be installed in home directory of other user than it is installed for."
-        info "HINT: Move AMS folder to non home directory. E.g. /mns/ams"
-        exit 4
-    fi
-fi
+USER=${SPECIFIC_USER:-"$USER"}
 
 if [ "$user" = "true" ]; then
     require_root_privileges 
@@ -317,15 +298,12 @@ fi
 # check, if node type supported
 if [ "$NEW_NODE" = "true" ]; then 
     get_json_file_value "$BASEDIR/supported_nodes.json" "$NODE"
-    if [ -z "$JSON_VALUE" ] || [ "$JSON_VALUE" = "null" ]; then
-        NO_LOCAL_SUPPORT=true
-    fi
+    if [ -z "$JSON_VALUE" ]; then NO_LOCAL_SUPPORT=true; fi
 
     # check for remote support
     get_json_value "$(curl -fsL \"$SUPPORTED_NODES_URL\")" "$NODE"
-    if [ -z "$JSON_VALUE" ] || [ "$JSON_VALUE" = "null" ]; then
-        NO_REMOTE_SUPPORT=true
-    fi
+    NO_REMOTE_SUPPORT=${JSON_VALUE:-true}
+    if [ -z "$JSON_VALUE" ]; then NO_REMOTE_SUPPORT=true; fi
  
     if  [ "$NO_LOCAL_SUPPORT" = "true" ] && [ "$NO_REMOTE_SUPPORT" = "true" ]; then 
         error "Not supported node type: $NODE"
@@ -339,11 +317,9 @@ fi
 if [ -z "$AMS_BRANCH" ]; then 
     if [ -f "$BASEDIR/state/conf.json" ]; then
         get_json_file_value "$BASEDIR/state/conf.json" "branch"
-        AMS_BRANCH=$JSON_VALUE
     fi 
-    if [ -z "$AMS_BRANCH" ]; then 
-        AMS_BRANCH=master
-    fi 
+    AMS_BRANCH=${AMS_BRANCH:-master}
+
     set_json_file_value "$BASEDIR/state/conf.json" "branch" "$AMS_BRANCH"
 fi
 
