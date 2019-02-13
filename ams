@@ -273,6 +273,11 @@ if [ "$full" = "true" ] || [ "$dependencies" = "true" ]; then
     chmod +x /usr/local/bin/docker-compose
     docker-compose --version || \
     { error "Failed to install or run docker-compose. Please retry..." && exit 10; }
+    # connect AMS repository in case it was downloaded as zip
+    if ! git --git-dir="$BASEDIR/.git" --work-tree="$BASEDIR" remote get-url origin 2>/dev/null; then 
+        git --git-dir="$BASEDIR/.git" --work-tree="$BASEDIR" init
+        git --git-dir="$BASEDIR/.git" --work-tree="$BASEDIR" remote add origin https://github.com/cryi/AMS.git; 
+    fi
 fi
 
 # update node type
